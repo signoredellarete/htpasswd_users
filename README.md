@@ -32,6 +32,10 @@ cd htpasswd_users
 chmod +x htpasswd_users.sh
 ```
 
+## Configuration
+This script has only a few configurations that can be changed directly within the `htpasswd-users.sh` file:
+
+
 ## Usage
 Run the script and follow the instructions
 ```
