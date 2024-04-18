@@ -1,5 +1,5 @@
 # htpasswd_users
-OpenShift HTPasswd identity provider - users management
+OpenShift HTPasswd identity provider - Users management
 
 ## Introduction
 > Warning!!!
