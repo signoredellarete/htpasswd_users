@@ -1,2 +1,2 @@
 # htpasswd_users
-Bash script to manage users 
+OpenShift htpasswd identity provider - users management
