@@ -171,6 +171,7 @@ esac
 
 
 ### EXEC ###
+check_identity_provider
 delete_passwd_file
 get_passwd_file
 main_menu
