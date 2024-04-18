@@ -47,7 +47,11 @@ delete_file_on_exit=true
 - **delete_file_on_exit**: If true the support file (htpasswd file) will be delete on exit. if you need to change file manually you can set it to false and the file will be available on working directory until the next execution of the script
 
 ## Usage
-Run the script and follow the instructions
+Run the script and follow the interactive menu
 ```
 ./htpasswd_users.sh
 ```
+
+
+
+
