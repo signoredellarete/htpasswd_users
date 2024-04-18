@@ -34,7 +34,14 @@ chmod +x htpasswd_users.sh
 
 ## Configuration
 This script has only a few configurations that can be changed directly within the `htpasswd-users.sh` file:
+```
+#!/bin/bash
 
+### CONF ###
+file='users.htpasswd' #The name of the support file that is created by downloading data from the secret
+update_oc=true #If true changes will be apply to OpenShift
+delete_file_on_exit=true #If true the support file (htpasswd file) will be delete on exit. if you need to change file manually you can set it to false and the file will be available on working directory until the next execution of the script
+```
 
 ## Usage
 Run the script and follow the instructions
