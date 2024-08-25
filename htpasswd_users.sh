@@ -13,7 +13,7 @@ jq='/usr/bin/jq'
 wc='/usr/bin/wc'
 
 ### VARS ###
-path=${PWD}
+basepath=${PWD}
 secret_name=`${oc} get oauth cluster -o=jsonpath='{.spec.identityProviders[*].htpasswd.fileData}' | ${jq} -r '.name'`
 index=""
 option=""
@@ -32,28 +32,28 @@ check_identity_provider(){
 }
 
 get_passwd_file(){
-  ${oc} get secret ${secret_name} -ojsonpath={.data.htpasswd} -n openshift-config | ${base64} --decode > ${path}/${file}
+  ${oc} get secret ${secret_name} -ojsonpath={.data.htpasswd} -n openshift-config | ${base64} --decode > ${basepath}/${file}
 }
 
 delete_passwd_file(){
   echo ${delete_file}
-  if [ -f ${path}/${file} ] && [ ${delete_file_on_exit} == true ];then
-    rm -f ${path}/${file}
+  if [ -f ${basepath}/${file} ] && [ ${delete_file_on_exit} == true ];then
+    rm -f ${basepath}/${file}
   fi
 }
 
 update_oc_secret(){
   if [ ${update_oc} == true ];then
-    ${oc} create secret generic ${secret_name} --from-file=htpasswd=${path}/${file} --dry-run=client -o yaml -n openshift-config | ${oc} replace -f -
+    ${oc} create secret generic ${secret_name} --from-file=htpasswd=${basepath}/${file} --dry-run=client -o yaml -n openshift-config | ${oc} apply -f -
   fi
 }
 
 update_passwd_file(){
-  ${htpasswd} -bB ${path}/${file} ${username} ${password} 
+  ${htpasswd} -bB ${basepath}/${file} ${username} ${password} 
 }
 
 delete_user_from_file(){
-  ${htpasswd} -D ${path}/${file} ${username}
+  ${htpasswd} -D ${basepath}/${file} ${username}
 }
 
 list_users(){
@@ -65,7 +65,7 @@ list_users(){
     echo ${counter}") "${user}
     users+=( $user )
     ((counter+=1))
-  done < ${path}/${file}
+  done < ${basepath}/${file}
   echo ""
 }
 
