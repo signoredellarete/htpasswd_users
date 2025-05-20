@@ -43,8 +43,8 @@ delete_file_on_exit=true
 ...
 ```
 - **file**: The name of the support file that is created by downloading data from the secret
-- **update_oc**: If true changes will be apply to OpenShift. If false, only the support file wil be changed.
-- **delete_file_on_exit**: If true the support file (htpasswd file) will be delete on exit. if you need to change file manually you can set it to false and the file will be available on working directory until the next execution of the script
+- **update_oc**: If true, changes will be apply to OpenShift. If false, only the support file will be changed.
+- **delete_file_on_exit**: If true, the support file (htpasswd file) will be delete on exit. if you need to change file manually you can set it to false and the file will be available on working directory.
 
 ## Usage
 Run the script and follow the interactive menu
