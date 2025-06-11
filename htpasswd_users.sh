@@ -23,20 +23,28 @@ password=""
 re='^[0-9]+$'
 
 ### FUNC ###
-htpasswd_bash() {
-  local user=$1
-  local pass=$2
-  local file=$3
-
-  # Generate hash SHA1 base64
-  local hash=$(printf "%s" "$pass" | openssl dgst -binary -sha1 | openssl base64)
-  local newline="${user}:{SHA}${hash}"
-
-  # Remove user if present
-  grep -v "^${user}:" "$file" > "$file.tmp" 2>/dev/null || true
-  echo "$newline" >> "$file.tmp"
-  mv "$file.tmp" "$file"
+htpasswd() {
+  if [ "$1" == "-bB" ]; then
+    local file=$2
+    local user=$3
+    local pass=$4
+    local hash=$(printf "%s" "$pass" | openssl dgst -binary -sha1 | openssl base64)
+    grep -v "^${user}:" "$file" 2>/dev/null > "$file.tmp" || true
+    echo "${user}:{SHA}${hash}" >> "$file.tmp"
+    mv "$file.tmp" "$file"
+  elif [ "$1" == "-D" ]; then
+    local file=$2
+    local user=$3
+    grep -v "^${user}:" "$file" 2>/dev/null > "$file.tmp" || true
+    mv "$file.tmp" "$file"
+  else
+    echo "Usage:"
+    echo "  htpasswd -bB <file> <user> <password>"
+    echo "  htpasswd -D <file> <user>"
+    return 1
+  fi
 }
+
 
 check_identity_provider(){
   if [ -z ${secret_name} ];then
@@ -64,11 +72,11 @@ update_oc_secret(){
 }
 
 update_passwd_file(){
-  ${htpasswd} -bB ${basepath}/${file} ${username} ${password} 
+  htpasswd -bB ${basepath}/${file} ${username} ${password} 
 }
 
 delete_user_from_file(){
-  ${htpasswd} -D ${basepath}/${file} ${username}
+  htpasswd -D ${basepath}/${file} ${username}
 }
 
 list_users(){
