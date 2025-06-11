@@ -6,7 +6,7 @@ update_oc=true
 delete_file_on_exit=true
 
 ### BINS ###
-htpasswd='/usr/bin/htpasswd'
+# htpasswd='/usr/bin/htpasswd'
 oc='/usr/local/bin/oc'
 base64='/usr/bin/base64'
 jq='/usr/bin/jq'
@@ -23,6 +23,21 @@ password=""
 re='^[0-9]+$'
 
 ### FUNC ###
+htpasswd_bash() {
+  local user=$1
+  local pass=$2
+  local file=$3
+
+  # Generate hash SHA1 base64
+  local hash=$(printf "%s" "$pass" | openssl dgst -binary -sha1 | openssl base64)
+  local newline="${user}:{SHA}${hash}"
+
+  # Remove user if present
+  grep -v "^${user}:" "$file" > "$file.tmp" 2>/dev/null || true
+  echo "$newline" >> "$file.tmp"
+  mv "$file.tmp" "$file"
+}
+
 check_identity_provider(){
   if [ -z ${secret_name} ];then
     echo "No secret found for htpasswd identityProvider"
