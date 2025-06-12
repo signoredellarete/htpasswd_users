@@ -6,7 +6,7 @@ update_oc=true
 delete_file_on_exit=true
 
 ### BINS ###
-# htpasswd='/usr/bin/htpasswd'
+htpasswd='/usr/bin/htpasswd'
 oc='/usr/local/bin/oc'
 base64='/usr/bin/base64'
 jq='/usr/bin/jq'
@@ -23,29 +23,6 @@ password=""
 re='^[0-9]+$'
 
 ### FUNC ###
-htpasswd() {
-  if [ "$1" == "-bB" ]; then
-    local file=$2
-    local user=$3
-    local pass=$4
-    local hash=$(printf "%s" "$pass" | openssl dgst -binary -sha1 | openssl base64)
-    grep -v "^${user}:" "$file" 2>/dev/null > "$file.tmp" || true
-    echo "${user}:{SHA}${hash}" >> "$file.tmp"
-    mv "$file.tmp" "$file"
-  elif [ "$1" == "-D" ]; then
-    local file=$2
-    local user=$3
-    grep -v "^${user}:" "$file" 2>/dev/null > "$file.tmp" || true
-    mv "$file.tmp" "$file"
-  else
-    echo "Usage:"
-    echo "  htpasswd -bB <file> <user> <password>"
-    echo "  htpasswd -D <file> <user>"
-    return 1
-  fi
-}
-
-
 check_identity_provider(){
   if [ -z ${secret_name} ];then
     echo "No secret found for htpasswd identityProvider"
@@ -72,11 +49,11 @@ update_oc_secret(){
 }
 
 update_passwd_file(){
-  htpasswd -bB ${basepath}/${file} ${username} ${password} 
+  ${htpasswd} -bB ${basepath}/${file} ${username} ${password} 
 }
 
 delete_user_from_file(){
-  htpasswd -D ${basepath}/${file} ${username}
+  ${htpasswd} -D ${basepath}/${file} ${username}
 }
 
 list_users(){
