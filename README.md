@@ -28,7 +28,7 @@ Where `htpasswd` is not installed, `perl` produces the same file, the way the sc
       print join("", map { $a[$_ % 64] } unpack("C*", $b));')
     hash=$(printf '%s' "$pw" | perl -e 'my $p = do { local $/; <STDIN> };
       my $h = crypt($p, $ARGV[0]);
-      print defined($h) ? $h : "";' "\$2b\$10\$${salt}")
+      print defined($h) ? $h : "";' "\$2y\$10\$${salt}")
     if [ ${#hash} -eq 60 ]; then
       printf '%s:%s\n' admin "$hash" > users.htpasswd
       echo 'users.htpasswd written'
@@ -43,6 +43,8 @@ Where `htpasswd` is not installed, `perl` produces the same file, the way the sc
 The braces are not decoration. Pasted text reaches the shell through the same input the `read` builtin reads from, so without them the prompt would take the next pasted line as the password and store the hash of something nobody typed. Grouping the commands makes the shell parse the whole block before running any of it, leaving the prompt to wait for the keyboard.
 
 The block writes nothing unless it holds a 60 character bcrypt hash of a non-empty password, so a `perl` without bcrypt support stops here instead of producing an unusable file.
+
+The `$2y$` tag is the one `htpasswd` emits and the one the identity provider accepts. The `$2a$`, `$2b$` and `$2y$` variants of bcrypt carry the same digest and differ by that tag alone, so the tag is not interchangeable here even though the cryptography is.
 
 **1b. Create the secret** from that file. This step is needed whichever of the two commands above was used, and the key inside the secret must be named `htpasswd`:
 ```
@@ -144,6 +146,15 @@ oc get oauth cluster -o yaml
 **`ERROR: several HTPasswd identity providers found`**
 
 More than one HTPasswd identity provider is configured, each with its own secret, and the script cannot tell which one is meant. Set `secret_name` in the script to the one to manage.
+
+**`Unrecognized hash type` in the oauth-server logs**
+
+Authentication fails with a line such as `Error authenticating "admin" with provider "htpasswd_provider": Unrecognized hash type`. The stored hash carries a tag the identity provider does not accept, `$2b$` being the usual one. Inspect what is stored with:
+```
+oc get secret htpass-secret -n openshift-config \
+  -o go-template='{{index .data "htpasswd" | base64decode}}'
+```
+Set the password again for every user whose hash starts with `$2b$`, either through the script or by rebuilding the file as shown in the Introduction. Both write `$2y$`.
 
 **`ERROR: no bcrypt hashing method available.`**
 

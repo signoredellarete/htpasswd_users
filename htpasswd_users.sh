@@ -37,9 +37,9 @@ password=''
 
 # Known-answer test vector: a bcrypt-capable crypt() hashes kat_pass with
 # kat_salt into exactly kat_hash.
-readonly kat_salt='$2b$05$abcdefghijklmnopqrstuu'
+readonly kat_salt='$2y$05$abcdefghijklmnopqrstuu'
 readonly kat_pass='openshift-htpasswd-selftest'
-readonly kat_hash='$2b$05$abcdefghijklmnopqrstuuOI4DOOJUgpjN/78BtPtPHgaUOKAuajG'
+readonly kat_hash='$2y$05$abcdefghijklmnopqrstuuOI4DOOJUgpjN/78BtPtPHgaUOKAuajG'
 
 ### FUNC ###
 # Report an error on stderr and abort.
@@ -186,29 +186,34 @@ hash_password(){
       return 1
     fi
 
+    # The $2y tag is the one htpasswd emits and the one the identity provider
+    # recognises. The $2a, $2b and $2y variants differ by that tag alone, the
+    # digest they produce from a given salt and password being identical.
     hash=$(printf '%s' "${pass}" | "${perl}" -e '
       my $p = do { local $/; <STDIN> };
       my $h = crypt($p, $ARGV[0]);
-      print defined($h) ? $h : "";' "$(printf '$2b$%02d$%s' "${bcrypt_cost}" "${salt}")" 2>/dev/null)
+      print defined($h) ? $h : "";' "$(printf '$2y$%02d$%s' "${bcrypt_cost}" "${salt}")" 2>/dev/null)
   fi
 
   # A malformed hash stored in the file would lock the user out with no visible
   # error, so nothing but a valid bcrypt hash is allowed through.
   if ! is_valid_bcrypt "${hash}";then
-    echo "ERROR: the generated hash is not a valid bcrypt hash, aborting." >&2
+    echo "ERROR: the generated hash is not a bcrypt hash the identity provider accepts, aborting." >&2
     return 1
   fi
 
   printf '%s' "${hash}"
 }
 
-# Succeed when $1 is a bcrypt hash: 60 characters, a $2a$/$2b$/$2y$ prefix and
-# a two-digit cost.
+# Succeed when $1 is a bcrypt hash the HTPasswd identity provider accepts: 60
+# characters, a two-digit cost and a $2a$ or $2y$ tag. A $2b$ tag holds the same
+# digest but is turned away by the identity provider, so it is refused here
+# rather than stored in a file that cannot authenticate anyone.
 is_valid_bcrypt(){
   local h=${1-}
   [ ${#h} -eq 60 ] || return 1
   case ${h} in
-    \$2[aby]\$[0-9][0-9]\$*) return 0 ;;
+    \$2[ay]\$[0-9][0-9]\$*) return 0 ;;
     *) return 1 ;;
   esac
 }
