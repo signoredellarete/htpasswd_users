@@ -12,8 +12,9 @@ Enabling it takes two separate objects, and the order matters. The `OAuth` manif
 
 **1a. Build the htpasswd file** with a first user in it. With `htpasswd` available, one command is enough, and it asks for the password twice without echoing it:
 ```
-htpasswd -cB users.htpasswd admin
+htpasswd -cB -C 10 users.htpasswd admin
 ```
+`-C 10` matches the `bcrypt_cost` the script uses, so the first user is hashed no weaker than the ones added later. Without it `htpasswd` falls back to a cost of 5.
 
 Where `htpasswd` is not installed, `perl` produces the same file, the way the script itself does when the command is missing. Paste the whole block, closing brace included, and type the password when prompted:
 ```
