@@ -15,27 +15,34 @@ Enabling it takes two separate objects, and the order matters. The `OAuth` manif
 htpasswd -cB users.htpasswd admin
 ```
 
-Where `htpasswd` is not installed, `perl` produces the same file, the way the script itself does when the command is missing. Paste the whole block: it checks the result and writes the file only if this `perl` really can compute bcrypt hashes.
+Where `htpasswd` is not installed, `perl` produces the same file, the way the script itself does when the command is missing. Paste the whole block, closing brace included, and type the password when prompted:
 ```
-salt=$(perl -e 'open(my $f, "<:raw", "/dev/urandom") or die "urandom: $!";
-  read($f, my $b, 22) == 22 or die "short read from urandom";
-  my @a = (".", "/", "A".."Z", "a".."z", "0".."9");
-  print join("", map { $a[$_ % 64] } unpack("C*", $b));')
-
-read -r -s -p 'Password: ' pw; echo
-
-hash=$(printf '%s' "$pw" | perl -e 'my $p = do { local $/; <STDIN> };
-  my $h = crypt($p, $ARGV[0]);
-  print defined($h) ? $h : "";' "\$2b\$10\$${salt}")
-
-if [ ${#hash} -eq 60 ]; then
-  printf '%s:%s\n' admin "$hash" > users.htpasswd
-  echo "users.htpasswd written"
-else
-  echo "ERROR: this perl cannot compute bcrypt hashes"
-fi
-unset pw
+{
+  read -r -s -p 'Password: ' pw; echo
+  if [ -z "$pw" ]; then
+    echo 'ERROR: empty password, nothing written'
+  else
+    salt=$(perl -e 'open(my $f, "<:raw", "/dev/urandom") or die "urandom: $!";
+      read($f, my $b, 22) == 22 or die "short read from urandom";
+      my @a = (".", "/", "A".."Z", "a".."z", "0".."9");
+      print join("", map { $a[$_ % 64] } unpack("C*", $b));')
+    hash=$(printf '%s' "$pw" | perl -e 'my $p = do { local $/; <STDIN> };
+      my $h = crypt($p, $ARGV[0]);
+      print defined($h) ? $h : "";' "\$2b\$10\$${salt}")
+    if [ ${#hash} -eq 60 ]; then
+      printf '%s:%s\n' admin "$hash" > users.htpasswd
+      echo 'users.htpasswd written'
+    else
+      echo 'ERROR: this perl cannot compute bcrypt hashes'
+    fi
+  fi
+  unset pw
+}
 ```
+
+The braces are not decoration. Pasted text reaches the shell through the same input the `read` builtin reads from, so without them the prompt would take the next pasted line as the password and store the hash of something nobody typed. Grouping the commands makes the shell parse the whole block before running any of it, leaving the prompt to wait for the keyboard.
+
+The block writes nothing unless it holds a 60 character bcrypt hash of a non-empty password, so a `perl` without bcrypt support stops here instead of producing an unusable file.
 
 **1b. Create the secret** from that file. This step is needed whichever of the two commands above was used, and the key inside the secret must be named `htpasswd`:
 ```
