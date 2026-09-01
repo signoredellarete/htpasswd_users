@@ -143,6 +143,9 @@ get_passwd_file(){
 }
 
 # Write the local htpasswd file back into the secret on the cluster.
+# The secret is replaced rather than applied. It is normally created with
+# 'oc create', which records none of the configuration annotation that
+# 'oc apply' expects, and applying over it warns about that on every update.
 update_oc_secret(){
   if [ "${update_oc}" != true ];then
     echo "update_oc=false: changes applied to the local file only."
@@ -151,7 +154,7 @@ update_oc_secret(){
 
   if "${oc}" create secret generic "${secret_name}" \
        --from-file=htpasswd="${basepath}/${file}" \
-       --dry-run=client -o yaml -n openshift-config | "${oc}" apply -f - ;then
+       --dry-run=client -o yaml -n openshift-config | "${oc}" replace -f - ;then
     echo "Secret '${secret_name}' updated on the cluster."
   else
     echo "ERROR: could not update secret '${secret_name}'." >&2
