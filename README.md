@@ -10,22 +10,44 @@ This script was tested on OpenShift 4.14 and works only if the identityProvider 
 
 Enabling it takes two separate objects, and the order matters. The `OAuth` manifest only *references* the secret holding the htpasswd file, it does not create it, and the script expects that secret to already exist: it downloads it, edits it and writes it back. Create the secret first.
 
-**1. Create the secret**, with a first user in it. The key inside the secret must be named `htpasswd`:
+**1a. Build the htpasswd file** with a first user in it. With `htpasswd` available, one command is enough, and it asks for the password twice without echoing it:
 ```
-htpasswd -cbB users.htpasswd admin 'ChooseAPassword'
+htpasswd -cB users.htpasswd admin
+```
+
+Where `htpasswd` is not installed, `perl` produces the same file, the way the script itself does when the command is missing. Paste the whole block: it checks the result and writes the file only if this `perl` really can compute bcrypt hashes.
+```
+salt=$(perl -e 'open(my $f, "<:raw", "/dev/urandom") or die "urandom: $!";
+  read($f, my $b, 22) == 22 or die "short read from urandom";
+  my @a = (".", "/", "A".."Z", "a".."z", "0".."9");
+  print join("", map { $a[$_ % 64] } unpack("C*", $b));')
+
+read -r -s -p 'Password: ' pw; echo
+
+hash=$(printf '%s' "$pw" | perl -e 'my $p = do { local $/; <STDIN> };
+  my $h = crypt($p, $ARGV[0]);
+  print defined($h) ? $h : "";' "\$2b\$10\$${salt}")
+
+if [ ${#hash} -eq 60 ]; then
+  printf '%s:%s\n' admin "$hash" > users.htpasswd
+  echo "users.htpasswd written"
+else
+  echo "ERROR: this perl cannot compute bcrypt hashes"
+fi
+unset pw
+```
+
+**1b. Create the secret** from that file. This step is needed whichever of the two commands above was used, and the key inside the secret must be named `htpasswd`:
+```
 oc create secret generic htpass-secret \
   --from-file=htpasswd=users.htpasswd \
   -n openshift-config
 rm -f users.htpasswd
 ```
 
-If `htpasswd` is not installed on the host, the same file can be produced with `perl`, the way the script itself does it when the command is missing:
+Check that the secret is there before going on:
 ```
-salt=$(perl -e 'open(my $f,"<:raw","/dev/urandom");read($f,my $b,22);
-  my @a=(".","/","A".."Z","a".."z","0".."9");
-  print join("",map{$a[$_%64]}unpack("C*",$b));')
-printf '%s' 'ChooseAPassword' | perl -e 'my $p=do{local $/;<STDIN>};
-  print "admin:", crypt($p,$ARGV[0]), "\n";' "\$2b\$10\$${salt}" > users.htpasswd
+oc get secret htpass-secret -n openshift-config
 ```
 
 **2. Enable the identityProvider**, with a manifest like this one below as an example:
